@@ -1,0 +1,156 @@
+import os
+
+# === ОБХОД ОШИБКИ WERKZEUG_SERVER_FD ===
+# Это заставляет Werkzeug думать, что он запущен в дочернем процессе
+os.environ['WERKZEUG_RUN_MAIN'] = 'true'
+
+from flask import Flask, Response
+
+app = Flask(__name__)
+
+STYLE = """
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        background: linear-gradient(135deg, #ffd6e8 0%, #e0d4ff 50%, #d4f1ff 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: #4a4a6a;
+    }
+    .card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(10px);
+        border-radius: 24px;
+        padding: 40px 30px;
+        max-width: 520px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(180, 160, 220, 0.25);
+    }
+    h1 { font-size: 28px; margin: 0 0 10px; color: #8a6bbf; }
+    p { color: #7a7a9a; margin: 0 0 24px; }
+    .btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #ffb3d1, #c9b3ff);
+        color: #fff;
+        padding: 14px 30px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        box-shadow: 0 6px 20px rgba(200, 160, 220, 0.35);
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .back { display: inline-block; margin-top: 24px; color: #9a8ac0; text-decoration: none; font-size: 14px; }
+    .back:hover { text-decoration: underline; }
+    .options {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 8px;
+        margin: 24px 0 8px;
+    }
+    .option {
+        padding: 12px 0;
+        border-radius: 14px;
+        border: 2px solid #e6d9ff;
+        background: #fff;
+        color: #8a6bbf;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 15px;
+    }
+    .option:disabled { opacity: .5; }
+    .option.wrong { background: #ffe4ef; border-color: #ffb3d1; color: #d66a9a; }
+    .hint { font-size: 13px; color: #b0a0d0; min-height: 18px; margin-top: 8px; }
+    .emoji { font-size: 42px; margin-bottom: 10px; }
+</style>
+"""
+
+HOME = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Для тебя</title>
+""" + STYLE + """
+</head>
+<body>
+<div class="card">
+    <div class="emoji">🌸</div>
+    <h1>Привет, любимая</h1>
+    <p>У меня есть один очень важный вопрос...</p>
+    <a class="btn" href="/question">Задать вопрос 💕</a>
+</div>
+</body>
+</html>
+"""
+
+QUESTION = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вопрос</title>
+""" + STYLE + """
+</head>
+<body>
+<div class="card">
+    <div class="emoji">💖</div>
+    <h1>Насколько ты прекрасная?</h1>
+    <p>Выбери вариант ответа:</p>
+    <div class="options" id="options"></div>
+    <div class="hint" id="hint">Подсказка: правильный ответ только один 😉</div>
+    <a class="back" href="/">← Назад</a>
+</div>
+
+<script>
+    var optionsEl = document.getElementById('options');
+    var hintEl = document.getElementById('hint');
+
+    for (var i = 1; i <= 100; i++) {
+        (function (num) {
+            var btn = document.createElement('button');
+            btn.className = 'option';
+            btn.textContent = num;
+            btn.onclick = function () {
+                if (num === 100) {
+                    btn.style.background = 'linear-gradient(135deg, #ffb3d1, #c9b3ff)';
+                    btn.style.color = '#fff';
+                    btn.style.borderColor = '#c9b3ff';
+                    hintEl.textContent = 'Правильно! Ты на 100 из 100 прекрасна 💕';
+                    var all = document.querySelectorAll('.option');
+                    for (var j = 0; j < all.length; j++) {
+                        if (all[j] !== btn) all[j].disabled = true;
+                    }
+                } else {
+                    btn.className = 'option wrong';
+                    btn.disabled = true;
+                    hintEl.textContent = 'Не-а, попробуй ещё 😄';
+                }
+            };
+            optionsEl.appendChild(btn);
+        })(i);
+    }
+</script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def home():
+    return Response(HOME, mimetype='text/html')
+
+@app.route('/question')
+def question():
+    return Response(QUESTION, mimetype='text/html')
+
+if __name__ == '__main__':
+    # host='0.0.0.0' нужен, чтобы к серверу можно было подключиться с телефона
+    app.run(host='0.0.0.0', port=5000, debug=False)
